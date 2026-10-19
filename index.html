@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Splicer</title>
+  <script>try{document.documentElement.dataset.theme=localStorage.getItem('splicer-theme')==='dark'?'dark':'blueprint'}catch(e){}</script>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -11,7 +12,23 @@
     <h1>Splicer</h1>
     <span id="info" class="muted">No image loaded</span>
     <div class="spacer"></div>
+    <label class="inline">Theme
+      <select id="theme">
+        <option value="blueprint">Blueprint</option>
+        <option value="dark">Dark</option>
+      </select>
+    </label>
     <button id="openBtn">Open image</button>
+    <label class="inline">Scale
+      <select id="scale" title="Export resolution">
+        <option value="0.5">0.5x</option>
+        <option value="1" selected>1x</option>
+        <option value="1.5">1.5x</option>
+        <option value="2">2x</option>
+        <option value="3">3x</option>
+        <option value="4">4x</option>
+      </select>
+    </label>
     <button id="exportBtn" class="primary" disabled>Export ZIP</button>
     <input id="fileInput" type="file" accept="image/*" hidden>
   </header>
@@ -40,6 +57,7 @@
       <label>Padding (px) <input id="pad" type="number" min="0" value="0"></label>
       <label>Name prefix <input id="prefix" type="text" value="slice"></label>
       <label class="check"><input id="skipEmpty" type="checkbox" checked> Skip fully transparent cells</label>
+      <label class="check"><input id="aa" type="checkbox" checked> Anti-alias slice lines</label>
       <p id="count" class="muted">0 cells</p>
       <button id="applyBtn" class="primary" disabled>Apply slice</button>
       <button id="clearBtn" disabled>Clear slices</button>
@@ -59,6 +77,7 @@
         <span id="zoomLabel">100%</span>
         <button id="zoomIn" aria-label="Zoom in">+</button>
         <button id="zoomFit">Fit</button>
+        <span class="muted hint">Hold Space and drag to pan</span>
       </div>
     </section>
 
