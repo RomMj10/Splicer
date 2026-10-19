@@ -19,7 +19,8 @@ Open `index.html` in a browser. No build step, no dependencies.
 - `js/zip.js` small ZIP writer (store method)
 - `assets/` sample images
 
-#Check out
+# Check out
+
 My website link here: <a href='https://rommj10.github.io/Splicer/'>https://rommj10.github.io/Splicer/</a>
 
 How to use it (Tutorial): <a href='https://github.com/RomMj10/Splicer/wiki'>https://github.com/RomMj10/Splicer/wiki</a>
