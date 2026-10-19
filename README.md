@@ -21,3 +21,5 @@ Open `index.html` in a browser. No build step, no dependencies.
 
 #Check out
 My website link here: <a href='https://rommj10.github.io/Splicer/'>https://rommj10.github.io/Splicer/</a>
+
+How to use it (Tutorial): <a href='https://github.com/RomMj10/Splicer/wiki'>https://github.com/RomMj10/Splicer/wiki</a>
