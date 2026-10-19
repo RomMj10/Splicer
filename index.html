@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Splicer</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="bar">
+    <h1>Splicer</h1>
+    <span id="info" class="muted">No image loaded</span>
+    <div class="spacer"></div>
+    <button id="openBtn">Open image</button>
+    <button id="exportBtn" class="primary" disabled>Export ZIP</button>
+    <input id="fileInput" type="file" accept="image/*" hidden>
+  </header>
+
+  <main class="layout">
+    <aside class="panel" id="settings">
+      <h2>Slice settings</h2>
+      <label>Type
+        <select id="mode">
+          <option value="count">Grid by cell count</option>
+          <option value="size">Grid by cell size</option>
+        </select>
+      </label>
+      <div id="countFields" class="row">
+        <label>Columns <input id="cols" type="number" min="1" value="4"></label>
+        <label>Rows <input id="rows" type="number" min="1" value="4"></label>
+      </div>
+      <div id="sizeFields" class="row" hidden>
+        <label>Cell width (px) <input id="cellW" type="number" min="1" value="32"></label>
+        <label>Cell height (px) <input id="cellH" type="number" min="1" value="32"></label>
+      </div>
+      <div class="row">
+        <label>Offset X <input id="offX" type="number" min="0" value="0"></label>
+        <label>Offset Y <input id="offY" type="number" min="0" value="0"></label>
+      </div>
+      <label>Padding (px) <input id="pad" type="number" min="0" value="0"></label>
+      <label>Name prefix <input id="prefix" type="text" value="slice"></label>
+      <label class="check"><input id="skipEmpty" type="checkbox" checked> Skip fully transparent cells</label>
+      <p id="count" class="muted">0 cells</p>
+      <button id="applyBtn" class="primary" disabled>Apply slice</button>
+      <button id="clearBtn" disabled>Clear slices</button>
+    </aside>
+
+    <section class="stage" id="stage">
+      <div id="empty" class="empty">
+        <p><strong>Drop an image here</strong></p>
+        <p class="muted">or use Open image. PNG, JPG, WebP.</p>
+      </div>
+      <div id="stageWrap" class="wrap" hidden>
+        <canvas id="imgCanvas"></canvas>
+        <canvas id="overlay"></canvas>
+      </div>
+      <div class="zoom" id="zoomBar" hidden>
+        <button id="zoomOut" aria-label="Zoom out">−</button>
+        <span id="zoomLabel">100%</span>
+        <button id="zoomIn" aria-label="Zoom in">+</button>
+        <button id="zoomFit">Fit</button>
+      </div>
+    </section>
+
+    <aside class="panel" id="slicesPanel">
+      <h2>Slices <span id="sliceCount" class="muted">0</span></h2>
+      <ul id="list" class="list"></ul>
+      <p id="listEmpty" class="muted">Apply a slice to list the results here. Names are editable.</p>
+    </aside>
+  </main>
+
+  <script src="js/zip.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
