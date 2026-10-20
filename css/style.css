@@ -1,11 +1,11 @@
 :root{
   color-scheme:light;
-  --paper:#f7f7f3; --ink:#0e0f12; --sky:#3d96d6; --rust:#c4531c;
+  --paper:#f0eae3; --ink:#0e0f12; --sky:#3d96d6; --rust:#c4531c;
 
-  --bg:var(--paper); --panel:#fcfcfa; --field:#fff;
+  --bg:var(--paper); --panel:#f0ebe5; --field:#f1ece7;
   --line:var(--ink); --text:var(--ink); --muted:#63666d;
   --accent:var(--ink); --on-accent:var(--paper); --accent-hover:var(--rust);
-  --btn:#fcfcfa; --btn-line:var(--ink); --btn-hover:#d9eaf7;
+  --btn:#f5eee9; --btn-line:var(--ink); --btn-hover:#d9eaf7;
   --item-hover:#eeeeea; --sel-bg:#d9eaf7; --danger:var(--rust);
   --checkA:#cfcfc8; --checkB:#e9e9e3;
   --grid:rgba(61,150,214,.16); --grid-major:rgba(61,150,214,.34);
