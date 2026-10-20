@@ -6,12 +6,11 @@
   <title>Splicer</title>
   <script>try{document.documentElement.dataset.theme=localStorage.getItem('splicer-theme')==='dark'?'dark':'blueprint'}catch(e){}</script>
   <link rel="stylesheet" href="css/style.css">
-  <link rel="icon" type="image/png" href="assets/favicon.svg">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 </head>
 <body>
   <header class="bar">
-    <img src="assets/favicon.svg" height="32" draggable="false" pointer-events="none" alt="Splicer logo" class="logo">
-    
+    <img height="32px" src="assets/favicon.svg" draggable="false" alt="Splicer logo" class="logo">
     <h1>Splicer</h1>
     <span id="info" class="muted">No image loaded</span>
     <div class="spacer"></div>
@@ -43,6 +42,7 @@
         <select id="mode">
           <option value="count">Grid by cell count</option>
           <option value="size">Grid by cell size</option>
+          <option value="custom">Custom</option>
         </select>
       </label>
       <div id="countFields" class="row">
@@ -53,18 +53,22 @@
         <label>Cell width (px) <input id="cellW" type="number" min="1" value="32"></label>
         <label>Cell height (px) <input id="cellH" type="number" min="1" value="32"></label>
       </div>
-      <div class="row">
-        <label>Offset X <input id="offX" type="number" min="0" value="0"></label>
-        <label>Offset Y <input id="offY" type="number" min="0" value="0"></label>
+      <div id="gridFields" class="group">
+        <div class="row">
+          <label>Offset X <input id="offX" type="number" min="0" value="0"></label>
+          <label>Offset Y <input id="offY" type="number" min="0" value="0"></label>
+        </div>
+        <label>Padding (px) <input id="pad" type="number" min="0" value="0"></label>
       </div>
-      <label>Padding (px) <input id="pad" type="number" min="0" value="0"></label>
       <label>Name prefix <input id="prefix" type="text" value="slice"></label>
-      <label class="check"><input id="skipEmpty" type="checkbox" checked> Skip fully transparent cells</label>
+      <label class="check" id="skipRow"><input id="skipEmpty" type="checkbox" checked> Skip fully transparent cells</label>
       <label class="check"><input id="aa" type="checkbox" checked> Anti-alias slice lines</label>
       <p id="count" class="muted">0 cells</p>
       <button id="applyBtn" class="primary" disabled>Apply slice</button>
       <button id="clearBtn" disabled>Clear slices</button>
     </aside>
+
+    <div class="resizer" id="resL" role="separator" aria-orientation="vertical" aria-label="Resize settings panel" title="Drag to resize, double-click to reset"></div>
 
     <section class="stage" id="stage">
       <div id="empty" class="empty">
@@ -76,6 +80,7 @@
         <canvas id="overlay"></canvas>
       </div>
       <div class="zoom" id="zoomBar" hidden>
+        <button id="undoBtn" title="Undo (Ctrl+Z)" disabled>Undo</button>
         <button id="zoomOut" aria-label="Zoom out">−</button>
         <span id="zoomLabel">100%</span>
         <button id="zoomIn" aria-label="Zoom in">+</button>
@@ -84,10 +89,18 @@
       </div>
     </section>
 
+    <div class="resizer" id="resR" role="separator" aria-orientation="vertical" aria-label="Resize slices panel" title="Drag to resize, double-click to reset"></div>
+
     <aside class="panel" id="slicesPanel">
       <h2>Slices <span id="sliceCount" class="muted">0</span></h2>
+      <div id="batchBar" class="batch" hidden>
+        <div class="top"><strong id="selCount">0 selected</strong><button id="deselBtn">Deselect</button></div>
+        <input id="batchName" type="text" placeholder="New name prefix" aria-label="Batch rename prefix">
+        <div class="row"><button id="renameBtn">Rename</button><button id="deleteBtn" class="danger">Delete</button></div>
+      </div>
       <ul id="list" class="list"></ul>
       <p id="listEmpty" class="muted">Apply a slice to list the results here. Names are editable.</p>
+      <p id="listHint" class="muted small" hidden>Shift-click selects a range. Ctrl-click toggles. In Custom, drag a selected box to move it or its handles to resize.</p>
     </aside>
   </main>
 
