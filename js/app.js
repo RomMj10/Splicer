@@ -297,6 +297,12 @@
     [...$('list').children].forEach((li, k) => li.classList.toggle('sel', S.selected.has(k)));
     $('batchBar').hidden = S.selected.size < 2;
     $('selCount').textContent = `${S.selected.size} selected`;
+
+    const n = S.selected.size, has = S.slices.length > 0;
+    $('exportBtn').disabled = !n;
+    $('exportBtn').textContent = n ? `Export (${n})` : 'Export';
+    $('exportMenuBtn').disabled = !has;
+    $('exportAllBtn').disabled = !has;
   }
 
   function renderList() {
@@ -318,7 +324,7 @@
       ul.appendChild(li);
     });
     const has = S.slices.length > 0;
-    $('clearBtn').disabled = !has; $('exportBtn').disabled = !has;
+    $('clearBtn').disabled = !has;
     $('sliceCount').textContent = S.slices.length;
     $('undoBtn').disabled = !undoStack.length;
     $('listEmpty').hidden = has; $('listHint').hidden = !has;
@@ -446,12 +452,12 @@
   window.addEventListener('mouseup', () => { if (pan) endPan(); });
 
   /* ---------- export ---------- */
-  async function exportZip() {
+  async function exportZip(list, tag) {
     const scale = parseFloat($('scale').value) || 1;
     const suffix = scale === 1 ? '' : `@${scale}x`;
-    const crisp = Number.isInteger(scale) && scale >= 1;   // integer upscales keep hard pixel edges
+    const crisp = Number.isInteger(scale) && scale >= 1; // integer upscales keep hard pixel edges
     const used = new Map(), files = [];
-    for (const s of S.slices) {
+    for (const s of list) {
       const base = (s.name.trim() || 'slice').replace(/[\\/:*?"<>|]/g, '_').replace(/\.png$/i, '');
       const n = used.get(base) || 0; used.set(base, n + 1);
       const name = (n ? `${base}_${n}` : base) + suffix + '.png';
@@ -471,7 +477,7 @@
     }
     const a = document.createElement('a');
     a.href = URL.createObjectURL(Zip.create(files));
-    a.download = `${S.base}_slices${suffix}.zip`; a.click();
+    a.download = `${S.base}_${tag}${suffix}.zip`; a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   }
 
@@ -479,8 +485,20 @@
   $('fileInput').onchange = e => { loadFile(e.target.files[0]); e.target.value = ''; };
   $('applyBtn').onclick = apply;
   $('clearBtn').onclick = () => { pushUndo(); S.slices = []; S.n = 0; S.selected.clear(); S.anchor = -1; renderList(); };
-  $('exportBtn').onclick = exportZip;
   $('aa').addEventListener('change', draw);
+
+  const menu = $('exportMenu'), menuBtn = $('exportMenuBtn');
+  const closeMenu = () => { menu.hidden = true; menuBtn.setAttribute('aria-expanded', 'false'); };
+  menuBtn.onclick = e => {
+    e.stopPropagation();
+    menu.hidden = !menu.hidden;
+    menuBtn.setAttribute('aria-expanded', String(!menu.hidden));
+  };
+  document.addEventListener('click', closeMenu);
+  window.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
+  $('exportBtn').onclick = () =>
+    exportZip([...S.selected].sort((a, b) => a - b).map(i => S.slices[i]), 'selected');
+  $('exportAllBtn').onclick = () => { closeMenu(); exportZip(S.slices, 'slices'); };
 
   function syncMode() {
     const m = $('mode').value;
