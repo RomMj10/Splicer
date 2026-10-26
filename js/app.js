@@ -2,7 +2,7 @@
   const $ = id => document.getElementById(id);
   const S = {
     img: null, base: 'image', slices: [], selected: new Set(), anchor: -1, n: 0,
-    zoom: 1, kx: 1, ky: 1, space: false, moved: false, drew: false, drag: null
+    zoom: 1, kx: 1, ky: 1, space: false, moved: false, drew: false, drag: null, sources: []
   };
   const cv = $('imgCanvas'), ov = $('overlay'), stage = $('stage');
   const ictx = cv.getContext('2d', { willReadFrequently: true }), octx = ov.getContext('2d');
@@ -10,7 +10,8 @@
   const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
   const typing = t => t && (t.tagName === 'SELECT' || t.tagName === 'TEXTAREA' ||
     (t.tagName === 'INPUT' && (t.type === 'text' || t.type === 'number')));
-  const isCustom = () => $('mode').value === 'custom';
+  const wf = () => $('workflow').value;
+  const isCustom = () => wf() !== 'merge' && $('mode').value === 'custom';
 
   /* ---------- theme ---------- */
   const themeSel = $('theme');
@@ -21,7 +22,6 @@
     draw();
   };
 
-  /* ---------- resizable side panels ---------- */
   const PANEL_MIN = 180, PANEL_MAX = 480, STAGE_MIN = 240;
   function initResizer(el, prop, side) {
     el.addEventListener('pointerdown', e => {
@@ -53,12 +53,13 @@
   initResizer($('resL'), '--wl', 'left');
   initResizer($('resR'), '--wr', 'right');
 
+  
   /* ---------- load ---------- */
   function loadFile(file) {
     if (!file || !file.type.startsWith('image/')) return;
     const im = new Image();
     im.onload = () => {
-      S.img = im; S.slices = []; S.n = 0; S.drag = null; undoStack.length = 0;
+      S.img = im; S.slices = []; S.n = 0; S.drag = null; S.sources = []; undoStack.length = 0;
       S.selected.clear(); S.anchor = -1;
       S.base = file.name.replace(/\.[^.]+$/, '');
       cv.width = im.naturalWidth;
@@ -73,9 +74,60 @@
     im.src = URL.createObjectURL(file);
   }
 
+  let addMode = false;
+  function loadFiles(list, append) {
+    const files = [...list].filter(f => f.type.startsWith('image/'));
+    if (!files.length) return;
+    if (wf() === 'slice') loadFile(files[0]); else loadMerge(files, append);
+
+  }
+
+  async function loadMerge(files, append) {
+    if (!append) S.sources = [];
+    for (const f of files) {
+      try {
+        const b = await createImageBitmap(f);
+        S.sources.push({ name: f.name.replace(/\.[^.]+$/, ''), img: b, w: b.width, h: b.height });
+      } catch (e) {
+        console.error('Error loading image:', f.name, e);
+      }
+    }
+    if (!S.sources.length) return;
+    S.base = S.sources.length > 1 ? 'atlas' : S.sources[0].name;
+    if (!append) $('mName').value = S.base;
+    repack(true);
+  }
+
+  function repack(fitView) {
+    const keep = new Map(S.slices.filter(s => s.key).map(s => [s.key, s.name])); // keep renames
+    const r = Pack.run(S.sources, { pad: num('mPad'), max: +$('mMax').value, sort: $('mSort').value, pow2: $('mPow2').checked });
+    $('mMsg').textContent = r.error || '';
+    if (!r.placed) return;
+    S.img = cv; S.drag = null; undoStack.length = 0;
+    cv.width = r.W; cv.height = r.H;
+    ictx.clearRect(0, 0, r.W, r.H);
+    for (const p of r.placed) ictx.drawImage(p.it.img, p.x, p.y);
+    // "both" with a single image starts unsliced, so you can slice it right away
+    S.slices = (wf() === 'merge' || r.placed.length > 1) ? r.placed.map(p => {
+      const rc = { x: p.x, y: p.y, w: p.it.w, h: p.it.h };
+      return { ...rc, name: keep.get(p.it) || p.it.name, key: p.it, thumb: thumb(rc) };
+    }) : [];
+    S.n = S.slices.length; S.selected.clear(); S.anchor = -1;
+    $('prefix').value = S.base;
+    $('info').textContent = `${S.base} · ${r.W}×${r.H}px · ${r.placed.length} images · ${Math.round(r.used * 100)}% used`;
+    $('empty').hidden = true; $('stageWrap').hidden = false; $('zoomBar').hidden = false;
+    $('applyBtn').disabled = false;
+    fitView ? fit() : setZoom(S.zoom);
+    renderList();
+  }
+
+  ['mPad', 'mMax', 'mSort', 'mPow2'].forEach(id =>
+    $(id).addEventListener(id === 'mPad' ? 'input' : 'change', () => { if (S.sources.length) repack(false); }));
+  $('mAddBtn').onclick = () => { addMode = true; $('fileInput').click(); };
+
   /* ---------- slicing ---------- */
   function computeRects() {
-    if (!S.img || isCustom()) return [];
+    if (!S.img || isCustom() || wf() === 'merge') return [];
     const W = cv.width, H = cv.height, ox = num('offX'), oy = num('offY'), p = num('pad');
     let cw, ch, cols, rows;
     if ($('mode').value === 'count') {
@@ -303,6 +355,7 @@
     $('exportBtn').textContent = n ? `Export (${n})` : 'Export';
     $('exportMenuBtn').disabled = !has;
     $('exportAllBtn').disabled = !has;
+    $('exportAtlasBtn').disabled = !has;
   }
 
   function renderList() {
@@ -481,8 +534,9 @@
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   }
 
-  $('openBtn').onclick = () => $('fileInput').click();
-  $('fileInput').onchange = e => { loadFile(e.target.files[0]); e.target.value = ''; };
+  $('openBtn').onclick = () => {addMode = false; $('fileInput').click(); };
+  $('empty').onclick = () => {addMode = false; $('fileInput').click(); };
+  $('fileInput').onchange = e => { loadFiles(e.target.files, addMode); addMode = false; e.target.value = ''; };
   $('applyBtn').onclick = apply;
   $('clearBtn').onclick = () => { pushUndo(); S.slices = []; S.n = 0; S.selected.clear(); S.anchor = -1; renderList(); };
   $('aa').addEventListener('change', draw);
@@ -499,23 +553,71 @@
   $('exportBtn').onclick = () =>
     exportZip([...S.selected].sort((a, b) => a - b).map(i => S.slices[i]), 'selected');
   $('exportAllBtn').onclick = () => { closeMenu(); exportZip(S.slices, 'slices'); };
+  $('exportAtlasBtn').onclick = () => { closeMenu(); exportAtlas(); };
 
   function syncMode() {
-    const m = $('mode').value;
-    $('countFields').hidden = m !== 'count';
-    $('sizeFields').hidden = m !== 'size';
-    $('gridFields').hidden = m === 'custom';
-    $('skipRow').hidden = m === 'custom';
-    $('applyBtn').hidden = m === 'custom';
+    const m = $('mode').value, w = wf(), sl = w !== 'merge';
+    $('modeRow').hidden = !sl;
+    $('countFields').hidden = !sl || m !== 'count';
+    $('sizeFields').hidden = !sl || m !== 'size';
+    $('gridFields').hidden = !sl || m === 'custom';
+    $('skipRow').hidden = !sl || m === 'custom';
+    $('applyBtn').hidden = !sl || m === 'custom';
+    $('mergeFields').hidden = w === 'slice';
+    $('exportAtlasBtn').hidden = w === 'slice';
+    $('emptyTitle').textContent = w === 'slice' ? 'Drop an image here' : 'Drop images here';
     ov.style.cursor = '';
     draw();
   }
-  $('mode').value = 'count'; syncMode();//debug: default to count mode on load
+  try { const w = localStorage.getItem('splicer-workflow'); if (w) $('workflow').value = w; } catch (e) {}
+  if (!$('workflow').value) $('workflow').value = 'slice';
+  $('mode').value = 'count'; syncMode();
   $('mode').onchange = syncMode;
+  $('workflow').onchange = () => {
+    try { localStorage.setItem('splicer-workflow', wf()); } catch (e) {}
+    syncMode();
+  };
+
   ['cols', 'rows', 'cellW', 'cellH', 'offX', 'offY', 'pad'].forEach(id =>
     $(id).addEventListener('input', () => { if (!S.slices.length) draw(); }));
 
   ['dragenter', 'dragover'].forEach(t => stage.addEventListener(t, e => { e.preventDefault(); stage.classList.add('drag'); }));
   ['dragleave', 'drop'].forEach(t => stage.addEventListener(t, e => { e.preventDefault(); stage.classList.remove('drag'); }));
-  stage.addEventListener('drop', e => loadFile(e.dataTransfer.files[0]));
+  
+    stage.addEventListener('drop', e => loadFiles(e.dataTransfer.files, false));
+    window.Splicer = {
+    getSlices: () => S.slices.map(s => {
+      const c = document.createElement('canvas'); c.width = s.w; c.height = s.h;
+      c.getContext('2d').drawImage(cv, s.x, s.y, s.w, s.h, 0, 0, s.w, s.h);
+      return { name: s.name, img: c, w: s.w, h: s.h };
+    })
+  };
+
+    async function exportAtlas() {
+    const safe = s => s.replace(/[\\/:*?"<>|]/g, '_');
+    const n = safe($('mName').value.trim() || S.base).replace(/\.png$/i, '');
+    const used = new Map();
+    const frames = S.slices.map(s => {
+      const b = safe(s.name.trim() || 'sprite'), k = used.get(b) || 0; used.set(b, k + 1);
+      return { name: k ? `${b}_${k}` : b, x: s.x, y: s.y, w: s.w, h: s.h };
+    }).sort((a, b) => a.y - b.y || a.x - b.x);
+    const meta = { app: 'Splicer', image: `${n}.png`, size: { w: cv.width, h: cv.height } };
+    let json;
+    if ($('mFmt').value === 'hash') {
+      const hash = {};
+      for (const f of frames) hash[f.name] = {
+        frame: { x: f.x, y: f.y, w: f.w, h: f.h }, rotated: false, trimmed: false,
+        spriteSourceSize: { x: 0, y: 0, w: f.w, h: f.h }, sourceSize: { w: f.w, h: f.h }
+      };
+      json = { frames: hash, meta };
+    } else json = { meta, frames };
+    const blob = await new Promise(r => cv.toBlob(r, 'image/png'));
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(Zip.create([
+      { name: `${n}.png`, data: new Uint8Array(await blob.arrayBuffer()) },
+      { name: `${n}.json`, data: new TextEncoder().encode(JSON.stringify(json, null, 2)) }
+    ]));
+    a.download = `${n}.zip`; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  }
 })();

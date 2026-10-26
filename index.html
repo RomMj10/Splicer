@@ -36,15 +36,43 @@
   <button id="exportMenuBtn" class="primary" aria-haspopup="menu" aria-expanded="false" aria-label="More export options" disabled>▾</button>
   <div class="menu" id="exportMenu" role="menu" hidden>
     <button id="exportAllBtn" role="menuitem">Export all</button>
+    <button id="exportAtlasBtn" role="menuitem">Export sheet</button>
   </div>
 </div>
-    <input id="fileInput" type="file" accept="image/*" hidden>
+    <input id="fileInput" type="file" accept="image/*" multiple hidden>
   </header>
 
   <main class="layout">
     <aside class="panel" id="settings">
+      <label>Workflow
+        <select id="workflow">
+          <option value="slice">Slice one image</option>
+          <option value="merge">Merge images into a sheet</option>
+          <option value="both">Merge, then slice</option>
+        </select>
+      </label>
+      <div id="mergeFields" class="group" hidden>
+        <div class="row">
+          <label>Padding (px) <input id="mPad" type="number" min="0" value="2"></label>
+          <label>Max size
+            <select id="mMax"><option>512</option><option>1024</option><option selected>2048</option><option>4096</option><option>8192</option></select>
+          </label>
+        </div>
+        <div class="row">
+          <label>Sort
+            <select id="mSort"><option value="area">Area</option><option value="height">Height</option><option value="name">Name</option><option value="added">As added</option></select>
+          </label>
+          <label>JSON
+            <select id="mFmt"><option value="array">Array</option><option value="hash">Hash (Phaser)</option></select>
+          </label>
+        </div>
+        <label>Sheet name <input id="mName" type="text" value="atlas"></label>
+        <label class="check"><input id="mPow2" type="checkbox"> Power-of-two size</label>
+        <button id="mAddBtn">Add more images</button>
+        <p id="mMsg" class="muted small"></p>
+      </div>
       <h2>Slice settings</h2>
-      <label>Type
+      <label id="modeRow">Type
         <select id="mode">
           <option value="count">Grid by cell count</option>
           <option value="size">Grid by cell size</option>
@@ -78,7 +106,7 @@
 
     <section class="stage" id="stage">
       <div id="empty" class="empty">
-        <p><strong>Drop an image here</strong></p>
+        <p><strong id="emptyTitle">Drop an image here</strong></p>
         <p class="muted">or use Open image. PNG, JPG, WebP.</p>
       </div>
       <div id="stageWrap" class="wrap" hidden>
@@ -112,5 +140,6 @@
 
   <script src="js/zip.js"></script>
   <script src="js/app.js"></script>
+  <script src="js/pack.js"></script>
 </body>
 </html>
