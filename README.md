@@ -5,7 +5,7 @@
 <h1 align="center">Splicer</h1>
 
 <p align="center">
-  Slice an image into a grid and export the pieces as a ZIP. Handy for textures and atlases.
+  Merge or slice an image into a grid and export the pieces as a ZIP. Handy for textures and atlases.
 </p>
 
 
@@ -17,6 +17,7 @@ Open `index.html` in a browser. No build step, no dependencies.
 - `css/style.css` editor styling
 - `js/app.js` loading, slicing, list, zoom, export
 - `js/zip.js` small ZIP writer (store method)
+- `js/pack.js` repacks multiple images into one canvas
 - `assets/` sample images
 
 # Check out
