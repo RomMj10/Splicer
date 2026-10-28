@@ -53,7 +53,7 @@ const Pack = (() => {
     }
     let W = Math.max(...placed.map(p => p.x + p.it.w)), H = Math.max(...placed.map(p => p.y + p.it.h));
     if (o.pow2) { W = pow2(W); H = pow2(H); }
-    return { W, H, placed, used: items.reduce((s, i) => s + i.w * i.h, 0) / (W * H) };
+    return { W, H, placed};
   }
   return { run };
 })();

@@ -34,7 +34,8 @@
       el.classList.add('drag'); document.body.classList.add('resizing');
       const move = ev => {
         const dx = ev.clientX - startX;
-        const room = window.innerWidth - other.getBoundingClientRect().width - 12 - STAGE_MIN;
+        const otherOn = !layout.classList.contains(side === 'left' ? 'r-off' : 'l-off');
+        const room = window.innerWidth - (otherOn ? other.getBoundingClientRect().width + 12 : 6) - STAGE_MIN;
         const w = Math.max(PANEL_MIN, Math.min(PANEL_MAX, room, startW + (side === 'left' ? dx : -dx)));
         document.documentElement.style.setProperty(prop, w + 'px');
       };
@@ -52,7 +53,39 @@
   }
   initResizer($('resL'), '--wl', 'left');
   initResizer($('resR'), '--wr', 'right');
-
+  const layout = document.querySelector('.layout'), bar = document.querySelector('.bar');
+  const compactMQ = matchMedia('(max-width:1000px)'), coarseMQ = matchMedia('(pointer:coarse)');
+  const ui = { l: { open: true, float: false }, r: { open: true, float: false } };
+  
+  function applyUI() {
+    const compact = compactMQ.matches;
+    layout.classList.toggle('compact', compact);
+    for (const k of ['l', 'r']) {
+      const u = ui[k], fl = compact || u.float;
+      layout.classList.toggle(k + '-hide', !u.open);
+      layout.classList.toggle(k + '-float', u.open && fl);
+      layout.classList.toggle(k + '-off', !u.open || fl);
+      $(k === 'l' ? 'togL' : 'togR').setAttribute('aria-pressed', String(u.open));
+      layout.querySelector(`.pin[data-side="${k}"]`).textContent = u.float ? 'Dock' : 'Float';
+    }
+  }
+  function resetUI() {
+    for (const k of ['l', 'r']) ui[k] = { open: !compactMQ.matches, float: false };
+    applyUI();
+  }
+  function toggleSide(k) {
+    ui[k].open = !ui[k].open;
+    if (ui[k].open && compactMQ.matches) ui[k === 'l' ? 'r' : 'l'].open = false; // one floating panel at a time
+    applyUI();
+  }
+  
+  $('togL').onclick = () => toggleSide('l');
+  $('togR').onclick = () => toggleSide('r');
+  layout.querySelectorAll('.pclose').forEach(b => b.onclick = () => { ui[b.dataset.side].open = false; applyUI(); });
+  layout.querySelectorAll('.pin').forEach(b => b.onclick = () => { const u = ui[b.dataset.side]; u.float = !u.float; applyUI(); });
+  compactMQ.addEventListener('change', resetUI);
+  new ResizeObserver(() => document.documentElement.style.setProperty('--hdr', bar.offsetHeight + 'px')).observe(bar);
+  resetUI();
   
   /* ---------- load ---------- */
   function loadFile(file) {
@@ -114,7 +147,7 @@
     }) : [];
     S.n = S.slices.length; S.selected.clear(); S.anchor = -1;
     $('prefix').value = S.base;
-    $('info').textContent = `${S.base} · ${r.W}×${r.H}px · ${r.placed.length} images · ${Math.round(r.used * 100)}% used`;
+    $('info').textContent = `${S.base} · ${r.W}×${r.H}px · ${r.placed.length} images`;
     $('empty').hidden = true; $('stageWrap').hidden = false; $('zoomBar').hidden = false;
     $('applyBtn').disabled = false;
     fitView ? fit() : setZoom(S.zoom);
@@ -210,9 +243,10 @@
   });
   const inside = (p, r) => p.x >= r.x && p.x < r.x + r.w && p.y >= r.y && p.y < r.y + r.h;
   function handleAt(e, r) {
+    const tol = e.pointerType === 'touch' ? 18 : 7;
     const b = ov.getBoundingClientRect(), mx = e.clientX - b.left, my = e.clientY - b.top;
     for (const [h, fx, fy] of HANDLES)
-      if (Math.abs(mx - (r.x + r.w * fx) * S.zoom) <= 7 && Math.abs(my - (r.y + r.h * fy) * S.zoom) <= 7) return h;
+      if (Math.abs(mx - (r.x + r.w * fx) * S.zoom) <= tol && Math.abs(my - (r.y + r.h * fy) * S.zoom) <= tol) return h;
     return null;
   }
 
@@ -237,7 +271,7 @@
     ov.style.cursor = c;
   });
 
-  window.addEventListener('mousemove', e => {
+  window.addEventListener('pointermove', e => {
     if (!drag) return;
     if (!drag.active) {
       if (Math.hypot(e.clientX - drag.cx, e.clientY - drag.cy) < 3) return;
@@ -264,7 +298,7 @@
     draw();
   });
 
-  window.addEventListener('mouseup', () => {
+  window.addEventListener('pointerup', () => {
     if (!drag) return;
     const d = drag, box = d.active && d.kind === 'new' ? S.drag : null;
     drag = null; S.drag = null;
@@ -280,15 +314,6 @@
       renderList();
       $('list').lastElementChild.scrollIntoView({ block: 'nearest' });
     } else draw();
-  });
-
-  window.addEventListener('keydown', e => {
-    if (e.key !== 'Escape' || !drag) return;
-    if (drag.active && drag.kind !== 'new') {   // revert the move/resize in progress
-      Object.assign(S.slices[drag.idx], drag.orig);
-      undoStack.pop(); $('undoBtn').disabled = !undoStack.length;
-    }
-    drag = null; S.drag = null; draw();
   });
 
   /* ---------- drawing ----------
@@ -330,7 +355,7 @@
 
     const er = editable();
     if (er && applied && !d) { // resize handles on the selected slice
-      const ax = sx(er.x), ay = sy(er.y), bx = sx(er.x + er.w), by = sy(er.y + er.h), hs = 3.5 * u;
+      const ax = sx(er.x), ay = sy(er.y), bx = sx(er.x + er.w), by = sy(er.y + er.h), hs = (coarseMQ.matches ? 6 : 3.5) * u;
       octx.setLineDash([]); octx.fillStyle = cssVar('--sky'); octx.strokeStyle = cssVar('--sky');
       for (const [, fx, fy] of HANDLES) {
         const hx = ax + (bx - ax) * fx, hy = ay + (by - ay) * fy;
@@ -379,6 +404,7 @@
     const has = S.slices.length > 0;
     $('clearBtn').disabled = !has;
     $('sliceCount').textContent = S.slices.length;
+    $('togCount').textContent = S.slices.length;
     $('undoBtn').disabled = !undoStack.length;
     $('listEmpty').hidden = has; $('listHint').hidden = !has;
     updateSelectionUI();
@@ -432,7 +458,7 @@
     }
   });
 
-  ov.addEventListener('click', e => {
+  ov.addEventListener('pointerdown', e => {
     if (S.space || S.moved) { S.moved = false; return; }   // click that ended a pan
     if (S.drew) { S.drew = false; return; }  // click that ended a custom box
     if (!S.slices.length) return;
@@ -472,10 +498,16 @@
   }, { passive: false });
   window.addEventListener('resize', () => { if (S.img) setZoom(S.zoom); });
 
-  /* ---------- pan (hold Space + left mouse) ---------- */
-  let pan = null;
+  /* ---------- pan (Space+drag, Pan button, or one finger) and pinch zoom ---------- */
+  let pan = null, pinch = null;
+  const ptrs = new Map();
   function endPan() { pan = null; stage.classList.remove('panning'); }
-  function setSpace(on) { S.space = on; ov.style.cursor = ''; stage.classList.toggle('pan', on); if (!on) endPan(); }
+  function setSpace(on) {
+    S.space = on; ov.style.cursor = ''; stage.classList.toggle('pan', on);
+    $('panBtn').setAttribute('aria-pressed', String(on));
+    if (!on) endPan();
+  }
+  $('panBtn').onclick = () => setSpace(!S.space);
 
   window.addEventListener('keydown', e => {
     if (e.code !== 'Space' || !S.img || typing(e.target)) return;
@@ -489,20 +521,40 @@
   });
   window.addEventListener('blur', () => setSpace(false));
 
-  stage.addEventListener('mousedown', e => {
+  stage.addEventListener('pointerdown', e => {
     S.moved = false;
-    if (!S.space || e.button !== 0) return;
-    e.preventDefault();
-    pan = { x: e.clientX, y: e.clientY, l: stage.scrollLeft, t: stage.scrollTop };
-    stage.classList.add('panning');
+    if (e.target.closest('.zoom')) return;
+    if (e.pointerType === 'touch') {
+      ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (ptrs.size === 2) {
+        cancelDrag(); endPan();
+        const [a, b] = [...ptrs.values()];
+        pinch = { d: Math.hypot(a.x - b.x, a.y - b.y) || 1, z: S.zoom };
+        return;
+      }
+    }
+  const touchPan = e.pointerType === 'touch' && !isCustom();
+  if (!(S.space || touchPan) || e.button !== 0 || ptrs.size > 1) return;
+  e.preventDefault();
+  pan = { x: e.clientX, y: e.clientY, l: stage.scrollLeft, t: stage.scrollTop };
+  stage.classList.add('panning');
   });
-  window.addEventListener('mousemove', e => {
-    if (!pan) return;
-    stage.scrollLeft = pan.l - (e.clientX - pan.x);
-    stage.scrollTop = pan.t - (e.clientY - pan.y);
-    S.moved = true;
+  window.addEventListener('pointermove', e => {
+    const p = ptrs.get(e.pointerId);
+    if (p) { p.x = e.clientX; p.y = e.clientY; }
+    if (pinch && ptrs.size === 2) {
+      const [a, b] = [...ptrs.values()];
+      setZoom(pinch.z * Math.hypot(a.x - b.x, a.y - b.y) / pinch.d); S.moved = true;
+      return;
+    }
+  if (!pan) return;
+    const dx = e.clientX - pan.x, dy = e.clientY - pan.y;
+    stage.scrollLeft = pan.l - dx; stage.scrollTop = pan.t - dy;
+    if (Math.hypot(dx, dy) > 4) S.moved = true;   // small jitter still counts as a tap
   });
-  window.addEventListener('mouseup', () => { if (pan) endPan(); });
+  const endPtr = e => { ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch = null; if (pan) endPan(); };
+  window.addEventListener('pointerup', endPtr);
+  window.addEventListener('pointercancel', endPtr);
 
   /* ---------- export ---------- */
   async function exportZip(list, tag) {
@@ -535,9 +587,8 @@
   }
 
   $('openBtn').onclick = () => {addMode = false; $('fileInput').click(); };
-  $('empty').onclick = () => {addMode = false; $('fileInput').click(); };
   $('fileInput').onchange = e => { loadFiles(e.target.files, addMode); addMode = false; e.target.value = ''; };
-  $('applyBtn').onclick = apply;
+  $('applyBtn').onclick = () => { apply(); if (compactMQ.matches) { ui.l.open = false; applyUI(); } };
   $('clearBtn').onclick = () => { pushUndo(); S.slices = []; S.n = 0; S.selected.clear(); S.anchor = -1; renderList(); };
   $('aa').addEventListener('change', draw);
 
@@ -549,7 +600,17 @@
     menuBtn.setAttribute('aria-expanded', String(!menu.hidden));
   };
   document.addEventListener('click', closeMenu);
-  window.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
+  function cancelDrag() {
+    if (!drag) return;
+    if (drag.active && drag.kind !== 'new') {   // revert the move/resize in progress
+      Object.assign(S.slices[drag.idx], drag.orig);
+      undoStack.pop(); $('undoBtn').disabled = !undoStack.length;
+    }
+    drag = null; S.drag = null; draw();
+  }
+  window.addEventListener('keydown', e => { if (e.key === 'Escape') cancelDrag(); });
+  window.addEventListener('pointercancel', cancelDrag);
+
   $('exportBtn').onclick = () =>
     exportZip([...S.selected].sort((a, b) => a - b).map(i => S.slices[i]), 'selected');
   $('exportAllBtn').onclick = () => { closeMenu(); exportZip(S.slices, 'slices'); };

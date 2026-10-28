@@ -39,7 +39,37 @@ h2{font-size:13px;margin:0 0 12px;font-weight:700;padding-bottom:6px;border-bott
 .muted{color:var(--muted)}
 .spacer{flex:1}
 .bar{display:flex;align-items:center;gap:10px;padding:8px 14px;background:var(--panel);border-bottom:1px solid var(--line)}
-.layout{flex:1;min-height:0;display:grid;grid-template-columns:var(--wl) 6px minmax(0,1fr) 6px var(--wr)}
+.layout{--cl:var(--wl);--rl:6px;--cr:var(--wr);--rr:6px;flex:1;min-height:0;display:grid;
+  grid-template-columns:var(--cl) var(--rl) minmax(0,1fr) var(--rr) var(--cr);grid-template-rows:minmax(0,1fr)}
+#settings{grid-area:1/1}#resL{grid-area:1/2}.stage{grid-area:1/3}#resR{grid-area:1/4}#slicesPanel{grid-area:1/5}
+.layout.l-off{--cl:0px;--rl:0px}
+.layout.r-off{--cr:0px;--rr:0px}
+.layout.l-off #resL,.layout.r-off #resR,.layout.l-hide #settings,.layout.r-hide #slicesPanel{display:none}
+.layout.l-float #settings,.layout.r-float #slicesPanel{position:fixed;z-index:15;top:calc(var(--hdr,48px) + 8px);bottom:8px;
+  border:1px solid var(--line);border-radius:var(--radius);box-shadow:3px 3px 0 var(--line)}
+.layout.l-float #settings{left:8px;width:min(var(--wl),88vw)}
+.layout.r-float #slicesPanel{right:8px;width:min(var(--wr),88vw)}
+.layout.r-off .batch{right:12px}
+.layout .pin{display:none}
+.layout .pclose{display:none}
+.layout.compact .pclose{display:inline-block}
+
+.phead{display:flex;align-items:center;gap:6px;position:sticky;top:-14px;z-index:2;margin:-14px -14px 0;
+  padding:8px 14px;background:var(--panel);border-bottom:1px dashed var(--line)}
+.phead button{padding:2px 8px}
+.phead .pclose{background:none;border-color:transparent;color:var(--muted)}
+.tog{align-items:center;gap:6px; display:flex; position:absolute}
+.tog[aria-pressed=true]{background:var(--sel-bg); display:none}
+#togL{left:12px;top:4rem}
+#togR{right:12px;top:4rem}
+.badge{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.zoom button[aria-pressed=true]{background:var(--sel-bg)}
+.toolbar{display:flex;align-items:center;gap:6px;z-index:1}
+
+/* touch */
+.stage{touch-action:pan-x pan-y}
+#overlay{touch-action:none;-webkit-touch-callout:none;user-select:none}
+
 .panel{background:var(--panel);padding:14px;overflow:auto;display:flex;flex-direction:column;gap:10px}
 .resizer{cursor:col-resize;touch-action:none;background:linear-gradient(var(--line),var(--line)) center/1px 100% no-repeat}
 .resizer:hover,.resizer.drag{background-color:color-mix(in srgb,var(--sky) 45%,transparent)}
@@ -121,9 +151,17 @@ button:disabled{opacity:.4;cursor:not-allowed}
 #atlasCanvas{max-width:100%;max-height:100%;object-fit:contain;image-rendering:pixelated;outline:1px solid var(--line);background:repeating-conic-gradient(var(--checkA) 0 25%,var(--checkB) 0 50%) 0 0/12px 12px}
 
 @media (max-width:860px){
-  .layout{grid-template-columns:1fr;grid-template-rows:auto 60vh auto;overflow:auto}
   .batch{left:12px;right:12px;width:auto}
   .resizer{display:none}
   .bar{flex-wrap:wrap}
   .atlas-body{grid-template-columns:1fr;grid-template-rows:auto 1fr}
+  #togL{top:calc(var(--hdr,48px) + 8px);left:8px}
+  #togR{top:calc(var(--hdr,48px) + 8px);right:8px}
+}
+
+@media (pointer:coarse){
+  button,select,input[type=number],input[type=text]{min-height:40px}
+  input,select{font-size:16px}
+  .item{grid-template-columns:48px 1fr auto}
+  .zoom .hint,.resizer{display:none}
 }
