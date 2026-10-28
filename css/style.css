@@ -96,7 +96,6 @@ button:disabled{opacity:.4;cursor:not-allowed}
 .stage{position:relative;overflow:auto;background:var(--stage-bg)}
 .empty{position:absolute;inset:0;display:grid;place-content:center;text-align:center;border:2px dashed var(--line);margin:16px;border-radius:var(--radius)}
 .empty[hidden]{display:none}
-#empty :hover {color:var(--sky);cursor:pointer}
 .stage.drag .empty{border-color:var(--sky)}
 .empty p{margin:2px}
 .wrap{position:relative;width:max-content;margin:24px auto;outline:1px solid var(--line)}
@@ -150,13 +149,20 @@ button:disabled{opacity:.4;cursor:not-allowed}
 .atlas-view{overflow:auto;padding:16px;display:grid;place-items:center;background:var(--stage-bg)}
 #atlasCanvas{max-width:100%;max-height:100%;object-fit:contain;image-rendering:pixelated;outline:1px solid var(--line);background:repeating-conic-gradient(var(--checkA) 0 25%,var(--checkB) 0 50%) 0 0/12px 12px}
 
+/* make mobile responsive -- openBtn should be at the top-right then export at the side -- everything should be inside a container */
 @media (max-width:860px){
   .batch{left:12px;right:12px;width:auto}
+  label.inline {color:transparent;position:absolute;top:-9999px;left:-9999px}
   .resizer{display:none}
   .bar{flex-wrap:wrap}
   .atlas-body{grid-template-columns:1fr;grid-template-rows:auto 1fr}
+  .logo{display:none}
   #togL{top:calc(var(--hdr,48px) + 8px);left:8px}
   #togR{top:calc(var(--hdr,48px) + 8px);right:8px}
+  #theme{position:fixed;top:12px;left:12px;z-index:20}
+  #exportMenu{position:fixed;top:calc(12px + 48px + 12px);left:12px;z-index:20}
+  #info{display:none}
+  .bar h1{display:none}
 }
 
 @media (pointer:coarse){
