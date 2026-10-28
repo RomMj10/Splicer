@@ -10,8 +10,10 @@ const Pack = (() => {
       let best = null, s1 = Infinity, s2 = Infinity;
       for (const f of free) {
         if (f.w < w || f.h < h) continue;
-        const a = Math.min(f.w - w, f.h - h), b = Math.max(f.w - w, f.h - h);
-        if (a < s1 || (a === s1 && b < s2)) { best = f; s1 = a; s2 = b; }
+        const top = f.y + h;
+        if (top < s1 || (top === s1 && f.x < s2)) { best = f; s1 = top; s2 = f.x; }
+        // const a = Math.min(f.w - w, f.h - h), b = Math.max(f.w - w, f.h - h);
+        // if (a < s1 || (a === s1 && b < s2)) { best = f; s1 = a; s2 = b; }
       }
       if (!best) return null;
       const p = { x: best.x, y: best.y, w, h }, next = [];
@@ -28,7 +30,9 @@ const Pack = (() => {
     return out;
   }
 
-  /** items: [{name,img,w,h}], o: {pad,max,sort,pow2} -> {W,H,placed,used} | {error} */
+  /*
+  * items: [{name,img,w,h}], o: {pad,max,sort,pow2} -> {W,H,placed,used} | {error} 
+  */
   function run(items, o) {
     const { pad, max } = o, order = items.slice();
     if (o.sort === 'area') order.sort((a, b) => b.w * b.h - a.w * a.h);
